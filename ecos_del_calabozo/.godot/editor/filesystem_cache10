@@ -1,0 +1,11 @@
+78098b89c88a74ebe8c20117b8754620
+::res://::1793836361
+enemigo.gd::GDScript::1111480170269472593::1793835926::0::1::::Enemigo<>CharacterBody2D<><>0<>0<><>::
+goblin.gd::GDScript::4180191651297457549::1793835926::0::1::::Goblin<>Enemigo<><>0<>0<><>::
+hud.gd::GDScript::2056539953911758350::1793835926::0::1::::HUD<>CanvasLayer<><>0<>0<><>::
+jugador.gd::GDScript::1028367579594857265::1793835926::0::1::::Jugador<>CharacterBody2D<><>0<>0<><>::
+main.gd::GDScript::1334281869360459106::1793835926::0::1::::<>Node2D<><>0<>0<><>::
+main.tscn::PackedScene::-1::1793835926::0::1::::<><><>0<>0<><>::res://main.gd
+objeto.gd::GDScript::3082452816836704640::1793835926::0::1::::Objeto<>Area2D<><>0<>0<><>::
+orco.gd::GDScript::8599357690094815511::1793835926::0::1::::Orco<>Enemigo<><>0<>0<><>::
+puerta.gd::GDScript::8921391763187622106::1793835926::0::1::::Puerta<>StaticBody2D<><>0<>0<><>::
