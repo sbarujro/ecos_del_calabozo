@@ -1,0 +1,17 @@
+res://cofre.tscn::c6b8d7c922d7a692420979c027e2cd8e::1793853451::res://.godot/exported/133200997/export-f567a856c1867e142484fa9af6aed992-cofre.scn
+res://controles.tscn::f5d40b055c91bc10744638c99d918709::1793853451::res://.godot/exported/133200997/export-b990d45e9c829428d343af642007fa61-controles.scn
+res://enemigo.tscn::b1cb5fb7e365bb02cb0fef15f37af592::1793853451::res://.godot/exported/133200997/export-b86431035411a885a0007ace4e71eb11-enemigo.scn
+res://game_over.tscn::dbeeb3ae654bba48b1be3a5dc25a534e::1793853451::res://.godot/exported/133200997/export-d8e4acb474e0f28479495aaad84d873f-game_over.scn
+res://goblin.tscn::c648cd511f838c6f03b0ad9d36c1af73::1793853451::res://.godot/exported/133200997/export-c0662ad4aadb34a9a4e17d6ec85972ad-goblin.scn
+res://hud.tscn::bf3051b79276273e987a6d428c1d01b0::1793853451::res://.godot/exported/133200997/export-f4cf891e5f7a93b93d9b27cfb8401ccb-hud.scn
+res://inventario.tscn::1dfb4074fde110c0b009aed10981099d::1793853451::res://.godot/exported/133200997/export-025f1d4381519b291cc6545916847305-inventario.scn
+res://jugador.tscn::7de432bdf39c8c34949a2be5243ebe59::1793853451::res://.godot/exported/133200997/export-f6b1af868ee71760252b5ae4782dcb2d-jugador.scn
+res://main.tscn::d18a7b7d189f4f222e77b5ce1e7a5181::1793853451::res://.godot/exported/133200997/export-3070c538c03ee49b7677ff960a3f5195-main.scn
+res://menu_principal.tscn::3ccbad4888f0bd80e14357ae89e2bdfb::1793853451::res://.godot/exported/133200997/export-ee49c99aa97246bbd0d359855b66cb27-menu_principal.scn
+res://objeto.tscn::626416dd2d3775db29e26f66506242fb::1793853451::res://.godot/exported/133200997/export-16099ac0560c4133a30a13c91e053ac7-objeto.scn
+res://orco.tscn::5f07233b31b2a6faa57dc304dbe71a22::1793853451::res://.godot/exported/133200997/export-f303160d11d8eab1368d693312a41317-orco.scn
+res://palanca.tscn::8191eaa9eb56231defe6873dc1ceddef::1793853451::res://.godot/exported/133200997/export-89e8f8b3c326411877f2059b025c9faf-palanca.scn
+res://pausa.tscn::2802be1bf1a31e2d20cb5152d16e80f8::1793853451::res://.godot/exported/133200997/export-e4791c611c375b241b1a91ddd07310df-pausa.scn
+res://puerta.tscn::877505ba9e1ee943efecad86475e0dd9::1793853451::res://.godot/exported/133200997/export-5311b515776bc787dd5a099983a82374-puerta.scn
+res://sala.tscn::bfc9a4f1d178cdacd28998c47955a00e::1793853451::res://.godot/exported/133200997/export-0c6a1a55704631b19e33d47432d41a1b-sala.scn
+res://victoria.tscn::ebe3a8d0a869672b3d1634f7be5c3bfe::1793853451::res://.godot/exported/133200997/export-1bf8e0e785705101fcf22f08d420ca39-victoria.scn

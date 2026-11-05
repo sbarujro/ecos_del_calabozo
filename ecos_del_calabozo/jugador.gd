@@ -22,8 +22,9 @@ var _cd_ataque = 0.0
 var _cd_esquiva = 0.0
 var _esquivando = 0.0
 var _inmune = 0.0
-var _flash_ataque = 0.0
+var _t_ataque = 0.0
 var _dir_esquiva = Vector2.RIGHT
+var _anim = ""
 
 # Encapsulamiento: la vida solo se modifica a traves de este set
 var vida = 100:
@@ -34,15 +35,37 @@ var vida = 100:
             _muerto = true
             jugador_murio.emit()
 
+@onready var _sprite = $Sprite
+@onready var _area_ataque = $AreaAtaque
+@onready var _camara = $Camara
+
 
 func _ready():
     motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
     add_to_group("jugador")
-    var forma = CollisionShape2D.new()
     var caja = RectangleShape2D.new()
     caja.size = Vector2(24, 24)
-    forma.shape = caja
-    add_child(forma)
+    $Colision.shape = caja
+    var golpe = RectangleShape2D.new()
+    golpe.size = Vector2(52, 52)
+    $AreaAtaque/Forma.shape = golpe
+
+    var d = "res://assets/caballero_"
+    _sprite.sprite_frames = Util.frames({
+        "quieto": {"archivos": [d + "quieto_0.png"], "vel": 1.0, "bucle": true},
+        "caminar": {"archivos": [d + "caminar_0.png", d + "caminar_1.png"], "vel": 8.0, "bucle": true},
+        "atacar": {"archivos": [d + "atacar_0.png", d + "atacar_1.png"], "vel": 12.0, "bucle": false},
+        "esquivar": {"archivos": [d + "esquivar_0.png"], "vel": 1.0, "bucle": true},
+    })
+    _sprite.play("quieto")
+
+    # La camara sigue al jugador sin salirse de la sala
+    _camara.limit_left = 0
+    _camara.limit_top = 0
+    _camara.limit_right = Cfg.ANCHO
+    _camara.limit_bottom = Cfg.ALTO
+    _camara.position_smoothing_enabled = true
+    _camara.position_smoothing_speed = 8.0
 
 
 func _physics_process(delta):
@@ -50,7 +73,7 @@ func _physics_process(delta):
     _cd_esquiva = maxf(0.0, _cd_esquiva - delta)
     _esquivando = maxf(0.0, _esquivando - delta)
     _inmune = maxf(0.0, _inmune - delta)
-    _flash_ataque = maxf(0.0, _flash_ataque - delta)
+    _t_ataque = maxf(0.0, _t_ataque - delta)
 
     var dir = Vector2.ZERO
     if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
@@ -70,7 +93,26 @@ func _physics_process(delta):
     else:
         velocity = dir * velocidad
     move_and_slide()
-    queue_redraw()
+    _actualizar_sprite(dir)
+
+
+func _actualizar_sprite(dir):
+    var anim = "quieto"
+    if _esquivando > 0.0:
+        anim = "esquivar"
+    elif _t_ataque > 0.0:
+        anim = "atacar"
+    elif dir != Vector2.ZERO:
+        anim = "caminar"
+    if anim != _anim:
+        _anim = anim
+        _sprite.play(anim)
+    if absf(mirando.x) > 0.1:
+        _sprite.flip_h = mirando.x < 0.0
+    if _inmune > 0.0 and int(_inmune * 20.0) % 2 == 0:
+        _sprite.modulate = Color(1.0, 0.45, 0.45)
+    else:
+        _sprite.modulate = Color.WHITE
 
 
 func _unhandled_input(event):
@@ -80,19 +122,25 @@ func _unhandled_input(event):
                 atacar()
             KEY_SHIFT:
                 esquivar()
-            KEY_P:
-                usar_pocion()
 
 
 func atacar():
     if _cd_ataque > 0.0 or _esquivando > 0.0:
         return
     _cd_ataque = 0.5
-    _flash_ataque = 0.12
-    var centro = global_position + mirando * 32.0
-    for e in get_tree().get_nodes_in_group("enemigos"):
-        if e.global_position.distance_to(centro) <= 45.0:
-            e.recibir_danio(danio, global_position)
+    _t_ataque = 0.25
+    Sonido.reproducir("espada")
+    _golpear()
+
+
+# El golpe se detecta con el Area2D "AreaAtaque", colocada en la direccion a la que mira el personaje
+func _golpear():
+    _area_ataque.position = mirando * 32.0
+    await get_tree().physics_frame
+    await get_tree().physics_frame
+    for cuerpo in _area_ataque.get_overlapping_bodies():
+        if cuerpo is Enemigo:
+            cuerpo.recibir_danio(danio, global_position)
 
 
 func esquivar():
@@ -107,6 +155,7 @@ func recibir_danio(cantidad, _origen = Vector2.ZERO):
     if _inmune > 0.0 or _esquivando > 0.0:
         return
     _inmune = 0.5
+    Sonido.reproducir("dano")
     vida -= cantidad
 
 
@@ -115,6 +164,7 @@ func usar_pocion():
         mensaje.emit("Tu vida ya está completa")
     elif gastar("pocion"):
         vida += 30
+        Sonido.reproducir("recoger")
         mensaje.emit("Usaste una poción (+30 de vida)")
     else:
         mensaje.emit("No tienes pociones")
@@ -147,6 +197,7 @@ func ganar_xp(cantidad):
         vida_max += 20
         danio += 2
         vida = vida_max
+        Sonido.reproducir("nivel")
         mensaje.emit("¡Subiste al nivel %d!" % nivel)
     xp_cambiada.emit(xp, nivel, xp_necesaria())
 
@@ -155,6 +206,12 @@ func emitir_estado():
     vida_cambiada.emit(vida, vida_max)
     xp_cambiada.emit(xp, nivel, xp_necesaria())
     inventario_cambiado.emit(inventario)
+
+
+func teletransportar(pos):
+    global_position = pos
+    velocity = Vector2.ZERO
+    _camara.reset_smoothing()
 
 
 func reiniciar():
@@ -167,16 +224,6 @@ func reiniciar():
     vida = vida_max
     _inmune = 0.0
     _esquivando = 0.0
+    _t_ataque = 0.0
+    mirando = Vector2.RIGHT
     emitir_estado()
-
-
-func _draw():
-    var c = Color.html("42a5f5")
-    if _esquivando > 0.0:
-        c = Color(0.7, 0.9, 1.0, 0.5)
-    elif _inmune > 0.0 and int(_inmune * 20.0) % 2 == 0:
-        c = Color.WHITE
-    draw_rect(Rect2(-12, -12, 24, 24), c)
-    draw_rect(Rect2(mirando * 8.0 - Vector2(3, 3), Vector2(6, 6)), Color.html("0d47a1"))
-    if _flash_ataque > 0.0:
-        draw_rect(Rect2(mirando * 32.0 - Vector2(22, 22), Vector2(44, 44)), Color(1, 1, 1, 0.45))

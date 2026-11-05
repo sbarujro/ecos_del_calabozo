@@ -4,14 +4,15 @@ extends Enemigo
 
 
 func _configurar():
+    prefijo = "goblin"
     vida_max = 30
     danio = 5
     velocidad = 120.0
     xp_otorgada = 20
     cooldown_ataque = 1.0
-    rango_ataque = 34.0
+    rango_ataque = 38.0
     tamano = Vector2(22, 22)
-    color = Color.html("4caf50")
+    alto_visual = 32
 
 
 func atacar():

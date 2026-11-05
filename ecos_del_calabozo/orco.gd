@@ -6,28 +6,28 @@ signal jefe_derrotado(posicion)
 
 
 func _configurar():
+    prefijo = "orco"
     vida_max = 120
     danio = 15
     velocidad = 90.0
     xp_otorgada = 150
     cooldown_ataque = 2.5
-    rango_ataque = 56.0
+    rango_ataque = 60.0
     tamano = Vector2(44, 44)
-    color = Color.html("2e7d32")
+    alto_visual = 48
 
 
+# Ataque cargado: el orco se pone naranja 1 segundo antes de golpear
 func atacar():
-    # Ataque cargado: se pone naranja 1 segundo antes de golpear
     _cargando = true
-    queue_redraw()
-    await get_tree().create_timer(1.0).timeout
-    if estado == Estado.MUERTO or not is_inside_tree():
-        return
+    _t_carga = 1.0
+    Sonido.reproducir("rugido")
+
+
+func _golpe_cargado():
     var j = _jugador()
     if j != null and global_position.distance_to(j.global_position) <= rango_ataque + 20.0:
         j.recibir_danio(danio, global_position)
-    _cargando = false
-    queue_redraw()
 
 
 func morir():

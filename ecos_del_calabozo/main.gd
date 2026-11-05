@@ -1,158 +1,87 @@
 extends Node2D
-## Escena principal: arma las salas, conecta las señales y controla el flujo del juego.
+## Escena principal: crea el jugador y el HUD, carga las salas y controla el flujo del juego.
 
-enum Pantalla { MENU, JUEGO, PAUSA, GAME_OVER, VICTORIA }
+enum Fase { MENU, JUEGO, PAUSA, INVENTARIO, GAME_OVER, VICTORIA }
 
-const ANCHO = 960
-const ALTO = 540
+const ESCENA_JUGADOR = preload("res://jugador.tscn")
+const ESCENA_SALA = preload("res://sala.tscn")
+const ESCENA_HUD = preload("res://hud.tscn")
+const ESCENA_MENU = preload("res://menu_principal.tscn")
+const ESCENA_CONTROLES = preload("res://controles.tscn")
+const ESCENA_PAUSA = preload("res://pausa.tscn")
+const ESCENA_INVENTARIO = preload("res://inventario.tscn")
+const ESCENA_GAME_OVER = preload("res://game_over.tscn")
+const ESCENA_VICTORIA = preload("res://victoria.tscn")
 const TOTAL_SALAS = 3
 
-var _estado = Pantalla.MENU
+var _fase = Fase.MENU
 var _sala_actual = 1
 var _sala = null
-var _puerta = null
 var _jugador = null
 var _hud = null
-var _paredes = []
+var _pantalla = null
 
 
 func _ready():
-    _hud = HUD.new()
+    _hud = ESCENA_HUD.instantiate()
     add_child(_hud)
 
-    _jugador = Jugador.new()
+    _jugador = ESCENA_JUGADOR.instantiate()
     add_child(_jugador)
+    # Las señales conectan al jugador con la interfaz sin acoplarlos
     _jugador.vida_cambiada.connect(_hud.actualizar_vida)
     _jugador.xp_cambiada.connect(_hud.actualizar_xp)
     _jugador.inventario_cambiado.connect(_hud.actualizar_inventario)
     _jugador.mensaje.connect(_hud.mostrar_mensaje)
     _jugador.jugador_murio.connect(_on_jugador_murio)
 
-    _cargar_sala(1)
     _jugador.emitir_estado()
-    _congelar(true)
-    _hud.mostrar_pantalla("ECOS DEL CALABOZO", "ENTER: Jugar        ESC: Salir\n\nControles\nMoverse: WASD o flechas\nAtacar: Espacio\nEsquivar: Shift\nInteractuar (puertas): E\nInventario: I        Usar poción: P\nPausa: Esc")
+    Sonido.musica("sala")
+    _ir_menu()
 
 
-# ---------- Dibujo del fondo y las paredes ----------
-func _draw():
-    draw_rect(Rect2(0, 0, ANCHO, ALTO), Color.html("1b1b2b"))
-    for cx in range(16):
-        for cy in range(9):
-            if (cx + cy) % 2 == 0:
-                draw_rect(Rect2(cx * 60, cy * 60, 60, 60), Color.html("20203a"))
-    for r in _paredes:
-        draw_rect(r, Color.html("4a4a6a"))
-
-
-# ---------- Construcción de las salas ----------
+# ---------- Salas ----------
 func _cargar_sala(n):
     _sala_actual = n
     if _sala != null:
         _sala.queue_free()
-    _sala = Node2D.new()
+    _sala = ESCENA_SALA.instantiate()
+    _sala.numero = n
+    _sala.jugador = _jugador
+    _sala.jefe_derrotado.connect(_on_jefe_derrotado)
     add_child(_sala)
-    _paredes.clear()
-
-    _crear_pared(Rect2(0, 0, ANCHO, 30))
-    _crear_pared(Rect2(0, ALTO - 30, ANCHO, 30))
-    _crear_pared(Rect2(0, 0, 30, ALTO))
-    _crear_pared(Rect2(ANCHO - 30, 0, 30, 210))
-    _crear_pared(Rect2(ANCHO - 30, 330, 30, 210))
-
-    _puerta = Puerta.new()
-    _puerta.position = Vector2(ANCHO - 15, 270)
-    _puerta.mensaje.connect(_hud.mostrar_mensaje)
-    _sala.add_child(_puerta)
-
-    _jugador.velocity = Vector2.ZERO
-    _jugador.global_position = Vector2(80, 270)
-
-    match n:
-        1:
-            _agregar_enemigo(Goblin.new(), Vector2(600, 150))
-            _agregar_enemigo(Goblin.new(), Vector2(650, 400))
-            _agregar_objeto("pocion", Vector2(200, 120))
-            _agregar_objeto("llave", Vector2(840, 450))
-            _agregar_objeto("moneda", Vector2(500, 100))
-            _agregar_objeto("moneda", Vector2(500, 440))
-            _agregar_objeto("moneda", Vector2(300, 270))
-        2:
-            _agregar_enemigo(Goblin.new(), Vector2(450, 120))
-            _agregar_enemigo(Goblin.new(), Vector2(450, 420))
-            _agregar_enemigo(Goblin.new(), Vector2(700, 200))
-            _agregar_enemigo(Goblin.new(), Vector2(700, 350))
-            _agregar_objeto("cofre", Vector2(800, 100))
-            _agregar_objeto("llave", Vector2(850, 440))
-            _agregar_objeto("moneda", Vector2(250, 150))
-            _agregar_objeto("moneda", Vector2(250, 390))
-            _agregar_objeto("moneda", Vector2(600, 270))
-        3:
-            var orco = _agregar_enemigo(Orco.new(), Vector2(700, 270))
-            orco.jefe_derrotado.connect(_on_jefe_derrotado)
-            _agregar_objeto("pocion", Vector2(150, 120))
-            _agregar_objeto("moneda", Vector2(480, 100))
-            _agregar_objeto("moneda", Vector2(480, 440))
-
+    move_child(_sala, 0)
+    _jugador.teletransportar(Vector2(100, 352))
     _hud.actualizar_sala(n, TOTAL_SALAS)
-    if _estado == Pantalla.JUEGO:
-        _mostrar_objetivo()
-    else:
-        _sala.process_mode = Node.PROCESS_MODE_DISABLED
-    queue_redraw()
-
-
-func _crear_pared(rect):
-    _paredes.append(rect)
-    var cuerpo = StaticBody2D.new()
-    cuerpo.position = rect.position + rect.size / 2.0
-    var forma = CollisionShape2D.new()
-    var caja = RectangleShape2D.new()
-    caja.size = rect.size
-    forma.shape = caja
-    cuerpo.add_child(forma)
-    _sala.add_child(cuerpo)
-
-
-func _agregar_enemigo(e, pos):
-    e.position = pos
-    e.murio.connect(_on_enemigo_murio)
-    _sala.add_child(e)
-    e.activar()
-    return e
-
-
-func _agregar_objeto(tipo, pos):
-    var o = Objeto.new()
-    o.tipo = tipo
-    o.position = pos
-    _sala.add_child(o)
+    _mostrar_objetivo()
 
 
 func _mostrar_objetivo():
-    if _sala_actual == TOTAL_SALAS:
-        _hud.mostrar_mensaje("¡Derrota al Orco guardián! Soltará la llave de salida")
-    else:
-        _hud.mostrar_mensaje("Recoge la llave y abre la puerta con E")
+    match _sala_actual:
+        1:
+            _hud.mostrar_mensaje("Recoge la llave y abre la puerta con E")
+        2:
+            _hud.mostrar_mensaje("Una palanca (E) esconde un cofre. Consigue la llave")
+        3:
+            _hud.mostrar_mensaje("¡Derrota al Orco guardián! Soltará la llave de salida")
 
 
-# ---------- Eventos del juego ----------
 func _physics_process(_delta):
-    if _estado != Pantalla.JUEGO:
+    if _fase != Fase.JUEGO or _sala == null:
         return
-    if _puerta != null and _puerta.abierta and _jugador.global_position.x > ANCHO - 25:
+    var puerta = _sala.puerta
+    if puerta != null and puerta.abierta and _jugador.global_position.x > Cfg.ANCHO - 20.0:
         if _sala_actual >= TOTAL_SALAS:
             _victoria()
         else:
             _cargar_sala(_sala_actual + 1)
 
 
-func _on_enemigo_murio(xp, _posicion):
-    _jugador.ganar_xp(xp)
-
-
+# ---------- Eventos ----------
 func _on_jefe_derrotado(posicion):
-    call_deferred("_agregar_objeto", "llave", posicion)
+    if _sala != null:
+        _sala.soltar_llave(posicion)
+    _hud.mostrar_mensaje("¡Orco derrotado! Recoge la llave y abre la salida")
 
 
 func _on_jugador_murio():
@@ -160,18 +89,20 @@ func _on_jugador_murio():
 
 
 func _game_over():
-    _estado = Pantalla.GAME_OVER
+    _fase = Fase.GAME_OVER
     _congelar(true)
-    _hud.mostrar_pantalla("GAME OVER", "Monedas: %d     Nivel: %d\n\nENTER para reintentar" % [_jugador.inventario.get("moneda", 0), _jugador.nivel])
+    Sonido.reproducir("derrota")
+    _mostrar(ESCENA_GAME_OVER, "Monedas: %d     Nivel: %d" % [_jugador.inventario.get("moneda", 0), _jugador.nivel])
 
 
 func _victoria():
-    _estado = Pantalla.VICTORIA
+    _fase = Fase.VICTORIA
     _congelar(true)
-    _hud.mostrar_pantalla("¡VICTORIA!", "Escapaste del calabozo\nMonedas: %d     Nivel: %d\n\nENTER para jugar de nuevo" % [_jugador.inventario.get("moneda", 0), _jugador.nivel])
+    Sonido.reproducir("victoria")
+    _mostrar(ESCENA_VICTORIA, "Escapaste del calabozo\nMonedas: %d     Nivel: %d" % [_jugador.inventario.get("moneda", 0), _jugador.nivel])
 
 
-# ---------- Estados y pausa ----------
+# ---------- Fases, pausa y pantallas ----------
 func _congelar(si):
     var modo = Node.PROCESS_MODE_INHERIT
     if si:
@@ -181,38 +112,93 @@ func _congelar(si):
         _sala.process_mode = modo
 
 
+func _mostrar(escena, texto = ""):
+    _cerrar_pantalla()
+    _pantalla = escena.instantiate()
+    _pantalla.texto = texto
+    _pantalla.accion.connect(_on_accion)
+    add_child(_pantalla)
+
+
+func _cerrar_pantalla():
+    if _pantalla != null:
+        _pantalla.queue_free()
+        _pantalla = null
+
+
+func _ir_menu():
+    if _sala != null:
+        _sala.queue_free()
+        _sala = null
+    _fase = Fase.MENU
+    _hud.visible = false
+    _jugador.visible = false
+    _congelar(true)
+    _mostrar(ESCENA_MENU)
+
+
 func _reiniciar():
-    _estado = Pantalla.JUEGO
-    _hud.ocultar_pantalla()
+    _cerrar_pantalla()
+    _fase = Fase.JUEGO
+    _hud.visible = true
+    _jugador.visible = true
     _jugador.reiniciar()
     _congelar(false)
     _cargar_sala(1)
+
+
+func _reanudar():
+    _cerrar_pantalla()
+    _fase = Fase.JUEGO
+    _congelar(false)
+
+
+func _abrir_inventario():
+    _fase = Fase.INVENTARIO
+    _congelar(true)
+    _mostrar(ESCENA_INVENTARIO, _texto_inventario())
+
+
+func _texto_inventario():
+    var inv = _jugador.inventario
+    return "Vida: %d / %d\n\nPociones: %d\nLlaves: %d\nMonedas: %d" % [_jugador.vida, _jugador.vida_max, inv.get("pocion", 0), inv.get("llave", 0), inv.get("moneda", 0)]
+
+
+func _on_accion(nombre):
+    match nombre:
+        "jugar", "reiniciar":
+            _reiniciar()
+        "controles":
+            _mostrar(ESCENA_CONTROLES)
+        "volver":
+            _mostrar(ESCENA_MENU)
+        "salir":
+            get_tree().quit()
+        "continuar", "cerrar":
+            _reanudar()
+        "menu":
+            _ir_menu()
+        "usar_pocion":
+            _jugador.usar_pocion()
+            if _pantalla != null and _pantalla.has_method("actualizar"):
+                _pantalla.actualizar(_texto_inventario())
 
 
 func _input(event):
     if not (event is InputEventKey and event.pressed and not event.echo):
         return
     var tecla = event.physical_keycode
-    match _estado:
-        Pantalla.MENU:
-            if tecla == KEY_ENTER or tecla == KEY_KP_ENTER:
-                _reiniciar()
-            elif tecla == KEY_ESCAPE:
-                get_tree().quit()
-        Pantalla.JUEGO:
+    match _fase:
+        Fase.JUEGO:
             if tecla == KEY_ESCAPE:
-                _estado = Pantalla.PAUSA
+                _fase = Fase.PAUSA
                 _congelar(true)
-                _hud.mostrar_pantalla("PAUSA", "ESC: continuar\nR: reiniciar")
+                _mostrar(ESCENA_PAUSA)
             elif tecla == KEY_I:
-                _hud.alternar_inventario()
-        Pantalla.PAUSA:
+                _abrir_inventario()
+        Fase.PAUSA:
             if tecla == KEY_ESCAPE:
-                _estado = Pantalla.JUEGO
-                _hud.ocultar_pantalla()
-                _congelar(false)
-            elif tecla == KEY_R:
-                _reiniciar()
-        Pantalla.GAME_OVER, Pantalla.VICTORIA:
-            if tecla == KEY_ENTER or tecla == KEY_KP_ENTER:
-                _reiniciar()
+                _reanudar()
+        Fase.INVENTARIO:
+            if tecla == KEY_I or tecla == KEY_ESCAPE:
+                _reanudar()
